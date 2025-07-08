@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PS Клуб</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      margin: 0; padding: 10px;
+    }
+    .group {
+      margin-bottom: 20px;
+      padding: 10px;
+      border-radius: 10px;
+    }
+    .PS3 { background-color: #D0EBFF; }
+    .PS4 { background-color: #D3F9D8; }
+    .PS5 { background-color: #FFF3BF; border: 2px solid #FFA000; }
+    .group h2 {
+      margin-top: 0;
+      font-size: 1.2em;
+    }
+    .table-card {
+      padding: 10px;
+      background: white;
+      margin: 10px 0;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .status {
+      font-size: 0.9em;
+      margin-bottom: 5px;
+    }
+    button {
+      padding: 8px 12px;
+      margin: 2px;
+      font-size: 0.9em;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .start-btn { background-color: #4CAF50; color: white; }
+    .stop-btn { background-color: #f44336; color: white; }
+    .disabled { opacity: 0.5; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+  <div id="app"></div>
+
+  <script>
+    const PRICES = { PS3: 3, PS4: 4, PS5: 5 };
+    const QUANTITIES = { PS3: 3, PS4: 3, PS5: 1 };
+    const state = {};
+
+    function formatTime(date) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function renderTable(group, index, container) {
+      const id = group + '_' + index;
+      state[id] = { start: null };
+
+      const div = document.createElement('div');
+      div.className = 'table-card';
+      div.innerHTML = `
+        <div><strong>Стол ${index + 1}</strong> — ${group} (${PRICES[group]} ман/час)</div>
+        <div class="status" id="status_${id}">Ожидание начала...</div>
+        <button class="start-btn" id="start_${id}">▶ Начать</button>
+        <button class="stop-btn disabled" id="stop_${id}">■ Завершить</button>
+      `;
+      container.appendChild(div);
+
+      document.getElementById(`start_${id}`).onclick = () => {
+        state[id].start = new Date();
+        document.getElementById(`status_${id}`).innerText = `Начато в ${formatTime(state[id].start)}`;
+        document.getElementById(`start_${id}`).classList.add("disabled");
+        document.getElementById(`stop_${id}`).classList.remove("disabled");
+      };
+
+      document.getElementById(`stop_${id}`).onclick = () => {
+        if (!state[id].start) return;
+        const end = new Date();
+        const mins = Math.round((end - state[id].start) / 60000);
+        const hours = mins / 60;
+        const total = (PRICES[group] * hours).toFixed(2);
+
+        alert(`Сеанс завершен:\nСтол ${index + 1} (${group})\nВремя: ${mins} мин\nСумма: ${total} манат`);
+
+        document.getElementById(`status_${id}`).innerText = "Ожидание начала...";
+        state[id].start = null;
+        document.getElementById(`start_${id}`).classList.remove("disabled");
+        document.getElementById(`stop_${id}`).classList.add("disabled");
+      };
+    }
+
+    function renderApp() {
+      const app = document.getElementById("app");
+      ["PS5", "PS4", "PS3"].forEach(group => {
+        const wrapper = document.createElement('div');
+        wrapper.className = `group ${group}`;
+        wrapper.innerHTML = `<h2>${group} — ${QUANTITIES[group]} шт.</h2>`;
+        app.appendChild(wrapper);
+
+        for (let i = 0; i < QUANTITIES[group]; i++) {
+          renderTable(group, i, wrapper);
+        }
+      });
+    }
+
+    renderApp();
+  </script>
+</body>
+</html>
