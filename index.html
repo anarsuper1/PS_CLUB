@@ -44,6 +44,32 @@
     .start-btn { background-color: #4CAF50; color: white; }
     .stop-btn { background-color: #f44336; color: white; }
     .disabled { opacity: 0.5; pointer-events: none; }
+    .extras {
+      margin-top: 8px;
+      font-size: 0.9em;
+    }
+    .extras .extra-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 4px 0;
+    }
+    .extra-controls {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .extra-controls button {
+      width: 30px;
+      height: 30px;
+      font-size: 1em;
+      padding: 0;
+    }
+    .extra-count {
+      width: 30px;
+      text-align: center;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -51,12 +77,61 @@
   <div id="app"></div>
 
   <script>
-    const PRICES = { PS3: 1, PS4: 2, PS5: 3 };
+    const PRICES = { PS3: 3, PS4: 4, PS5: 5 };
     const QUANTITIES = { PS3: 3, PS4: 3, PS5: 1 };
+    const EXTRAS = {
+      "Бизон": 2,
+      "Кола": 2,
+      "Фри": 3
+    };
     const state = {};
 
     function formatTime(date) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function renderExtras(id) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'extras';
+      wrapper.innerHTML = "<strong>Доп. услуги:</strong>";
+
+      for (const [name, price] of Object.entries(EXTRAS)) {
+        const row = document.createElement('div');
+        row.className = 'extra-row';
+
+        row.innerHTML = `
+          <span>${name} (${price} ман)</span>
+          <div class="extra-controls">
+            <button type="button" onclick="changeExtra('${id}', '${name}', -1)">−</button>
+            <span class="extra-count" id="count_${id}_${name}">0</span>
+            <button type="button" onclick="changeExtra('${id}', '${name}', 1)">+</button>
+          </div>
+        `;
+        wrapper.appendChild(row);
+      }
+      return wrapper;
+    }
+
+    function changeExtra(id, name, delta) {
+      const countSpan = document.getElementById(`count_${id}_${name}`);
+      let current = parseInt(countSpan.innerText);
+      current = Math.max(0, current + delta);
+      countSpan.innerText = current;
+    }
+
+    function getSelectedExtras(id) {
+      const result = [];
+      for (const name of Object.keys(EXTRAS)) {
+        const count = parseInt(document.getElementById(`count_${id}_${name}`).innerText);
+        if (count > 0) result.push({ name, count });
+      }
+      return result;
+    }
+
+    function resetExtras(id) {
+      for (const name of Object.keys(EXTRAS)) {
+        document.getElementById(`count_${id}_${name}`).innerText = "0";
+      }
     }
 
     function renderTable(group, index, container) {
@@ -71,6 +146,8 @@
         <button class="start-btn" id="start_${id}">▶ Начать</button>
         <button class="stop-btn disabled" id="stop_${id}">■ Завершить</button>
       `;
+      const extrasBlock = renderExtras(id);
+      div.appendChild(extrasBlock);
       container.appendChild(div);
 
       document.getElementById(`start_${id}`).onclick = () => {
@@ -85,14 +162,27 @@
         const end = new Date();
         const mins = Math.round((end - state[id].start) / 60000);
         const hours = mins / 60;
-        const total = (PRICES[group] * hours).toFixed(2);
+        const sessionPrice = PRICES[group] * hours;
 
-        alert(`Сеанс завершен:\nСтол ${index + 1} (${group})\nВремя: ${mins} мин\nСумма: ${total} манат`);
+        const extras = getSelectedExtras(id);
+        const extrasLines = extras.map(e => `${e.name} x${e.count} = ${e.count * EXTRAS[e.name]} ман`);
+        const extrasTotal = extras.reduce((sum, e) => sum + e.count * EXTRAS[e.name], 0);
+
+        const total = (sessionPrice + extrasTotal).toFixed(2);
+
+        alert(`Сеанс завершен:
+Стол ${index + 1} (${group})
+Время: ${mins} мин
+Сеанс: ${sessionPrice.toFixed(2)} манат
+${extrasLines.join('\n')}
+Итого: ${total} манат`);
 
         document.getElementById(`status_${id}`).innerText = "Ожидание начала...";
         state[id].start = null;
         document.getElementById(`start_${id}`).classList.remove("disabled");
         document.getElementById(`stop_${id}`).classList.add("disabled");
+
+        resetExtras(id);
       };
     }
 
